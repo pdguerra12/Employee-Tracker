@@ -161,4 +161,85 @@ const promptAddRole = () => {
 		});
 };
 
+const promptAddEmployee = (roles) => {
+	return db
+		.promise()
+		.query("SELECT R.id, R.title FROM role R;")
+		.then(([employees]) => {
+			let selectRole = employees.map(({ id, title }) => ({
+				value: id,
+				name: title,
+			}));
+
+			db.promise()
+				.query(
+					"SELECT E.id, CONCAT(E.first_name,' ',E.last_name) AS manager FROM employee E;"
+				)
+				.then(([managers]) => {
+					let selectManager = managers.map(({ id, manager }) => ({
+						value: id,
+						name: manager,
+					}));
+
+					inquirer
+						.prompt([
+							{
+								type: "input",
+								name: "firstName",
+								message: "What is the employee's first name (Required)",
+								validate: (firstName) => {
+									if (firstName) {
+										return true;
+									} else {
+										console.log("Please enter the employee's first name!");
+										return false;
+									}
+								},
+							},
+							{
+								type: "input",
+								name: "lastName",
+								message: "What is the employee's last name (Required)",
+								validate: (lastName) => {
+									if (lastName) {
+										return true;
+									} else {
+										console.log("Please enter the employee's last name!");
+										return false;
+									}
+								},
+							},
+							{
+								type: "list",
+								name: "role",
+								message: "What is the employee's role?",
+								choices: selectRole,
+							},
+							{
+								type: "list",
+								name: "manager",
+								message: "Who is the employee's manager?",
+								choices: selectManager,
+							},
+						])
+						.then(({ firstName, lastName, role, manager }) => {
+							const query = db.query(
+								"INSERT INTO employee SET ?",
+								{
+									first_name: firstName,
+									last_name: lastName,
+									role_id: role,
+									manager_id: manager,
+								},
+								function (err, res) {
+									if (err) throw err;
+									console.log({ role, manager });
+								}
+							);
+						})
+						.then(() => viewEmployees());
+				});
+		});
+};
+
 promptMenu();
