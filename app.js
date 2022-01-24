@@ -53,14 +53,14 @@ const promptMenu = () => {
 
 const viewDepts = () => {
 	db.query("SELECT * FROM department;", (err, results) => {
-		console.table(results); // results contains rows returned by server
+		console.table(results);
 		promptMenu();
 	});
 };
 
 const viewRoles = () => {
 	db.query("SELECT * FROM role;", (err, results) => {
-		console.table(results); // results contains rows returned by server
+		console.table(results);
 		promptMenu();
 	});
 };
@@ -69,10 +69,96 @@ const viewEmployees = () => {
 	db.query(
 		"SELECT E.id, E.first_name, E.last_name, R.title, D.name AS department, R.salary, CONCAT(M.first_name,' ',M.last_name) AS manager FROM employee E JOIN role R ON E.role_id = R.id JOIN department D ON R.department_id = D.id LEFT JOIN employee M ON E.manager_id = M.id;",
 		(err, results) => {
-			console.table(results); // results contains rows returned by server
+			console.table(results);
 			promptMenu();
 		}
 	);
+};
+
+const promptAddDept = () => {
+	inquirer
+		.prompt([
+			{
+				type: "input",
+				name: "name",
+				message:
+					"What is the name of the department you would like to add? (Required)",
+				validate: (deptName) => {
+					if (deptName) {
+						return true;
+					} else {
+						console.log("Please enter the name of your department!");
+						return false;
+					}
+				},
+			},
+		])
+		.then((name) => {
+			db.promise().query("INSERT INTO department SET ?", name);
+			viewDepts();
+		});
+};
+
+const promptAddRole = () => {
+	return db
+		.promise()
+		.query("SELECT department.id, department.name FROM department;")
+		.then(([depts]) => {
+			let deptChoices = depts.map(({ id, name }) => ({
+				name: name,
+				value: id,
+			}));
+
+			inquirer
+				.prompt([
+					{
+						type: "input",
+						name: "title",
+						message: "Enter the name of your title (Required)",
+						validate: (titleName) => {
+							if (titleName) {
+								return true;
+							} else {
+								console.log("Please enter your title name!");
+								return false;
+							}
+						},
+					},
+					{
+						type: "list",
+						name: "department",
+						message: "Which department are you from?",
+						choices: deptChoices,
+					},
+					{
+						type: "input",
+						name: "salary",
+						message: "Enter your salary (Required)",
+						validate: (salary) => {
+							if (salary) {
+								return true;
+							} else {
+								console.log("Please enter your salary!");
+								return false;
+							}
+						},
+					},
+				])
+				.then(({ title, department, salary }) => {
+					const query = db.query(
+						"INSERT INTO role SET ?",
+						{
+							title: title,
+							department_id: department,
+							salary: salary,
+						},
+						function (err, res) {
+							if (err) throw err;
+						}
+					);
+				})
+				.then(() => viewRoles());
+		});
 };
 
 promptMenu();
