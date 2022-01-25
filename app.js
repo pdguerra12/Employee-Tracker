@@ -1,9 +1,16 @@
 const inquirer = require("inquirer");
 const fs = require("fs");
 const mysql = require("mysql2");
+const db = require("./db/connection.js");
 require("console.table");
 
 const promptMenu = () => {
+	console.log(`
+	=================
+	E M P L O Y E E
+        M A N A G E R
+	=================
+	`);
 	return inquirer
 		.prompt([
 			{
@@ -238,6 +245,70 @@ const promptAddEmployee = (roles) => {
 							);
 						})
 						.then(() => viewEmployees());
+				});
+		});
+};
+
+const promptUpdateRole = () => {
+	return db
+		.promise()
+		.query("SELECT R.id, R.title, R.salary, R.department_id FROM role R;")
+		.then(([roles]) => {
+			let roleUpdate = roles.map(({ id, title }) => ({
+				value: id,
+				name: title,
+			}));
+
+			inquirer
+				.prompt([
+					{
+						type: "list",
+						name: "role",
+						message: "Which role do you want to update?",
+						choices: roleUpdate,
+					},
+				])
+				.then((role) => {
+					console.log(role);
+					inquirer
+						.prompt([
+							{
+								type: "input",
+								name: "title",
+								message: "Enter the name of your title (Required)",
+								validate: (titleName) => {
+									if (titleName) {
+										return true;
+									} else {
+										console.log("Please enter the name of your title!");
+										return false;
+									}
+								},
+							},
+							{
+								type: "input",
+								name: "salary",
+								message: "Enter your salary (Required)",
+								validate: (salary) => {
+									if (salary) {
+										return true;
+									} else {
+										console.log("Please enter your salary!");
+										return false;
+									}
+								},
+							},
+						])
+						.then(({ title, salary }) => {
+							const query = db.query(
+								"UPDATE role SET title = ?, salary = ? WHERE id = ?",
+								[title, salary, role.role],
+								function (err, res) {
+									if (err) throw err;
+								}
+							);
+						})
+						.then(() => promptMenu());
 				});
 		});
 };
